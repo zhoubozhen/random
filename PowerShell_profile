@@ -1,0 +1,150 @@
+位于C:\Users\Bozhen Zhou\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
+
+function jlab {
+
+    $sshUser = "bozhen2"
+    $sshHost = "tesla.bioen.illinois.edu"
+    $port    = 8892
+
+    Write-Host "[INFO] Starting remote JupyterLab..."
+
+    # 启动远端 Jupyter（不显示输出）
+    ssh.exe -T "$sshUser@$sshHost" "bash ~/zbz_start/start_jlab.sh" | Out-Null
+
+    Write-Host "[INFO] Launching SSH tunnel in background..."
+
+    $sshArgs = @(
+        "-N"
+        "-L"
+        "$port`:127.0.0.1`:$port"
+        "$sshUser@$sshHost"
+    )
+
+    Start-Process `
+        -FilePath "ssh.exe" `
+        -ArgumentList $sshArgs `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput "$env:TEMP\ssh_tunnel_out.log" `
+        -RedirectStandardError "$env:TEMP\ssh_tunnel_err.log"
+
+    Start-Sleep -Seconds 1
+
+    $url = "http://localhost:$port/lab"
+    Write-Host "[INFO] Opening browser at $url"
+    Start-Process $url
+}
+
+
+function jlab_ein {
+
+    $sshUser = "bozhen2"
+    $sshHost = "einstein.bioen.illinois.edu"
+    $port    = 8893
+
+    Write-Host "[INFO] Starting remote JupyterLab..."
+    ssh.exe -T "$sshUser@$sshHost" "bash ~/zbz_start/start_jlab_einstein.sh" | Out-Null
+
+    # 关键：清理本机所有占用 8893 的 LISTEN（只杀这一端口）
+    $pids = (netstat -ano | Select-String ":$port\s" | ForEach-Object { ($_.Line -split "\s+")[-1] } | Select-Object -Unique)
+    foreach ($pid in $pids) {
+        if ($pid -match '^\d+$' -and [int]$pid -ne 0) {
+            try { taskkill /PID $pid /F | Out-Null } catch {}
+        }
+    }
+
+    Write-Host "[INFO] Launching SSH tunnel in background..."
+    $sshArgs = @(
+        "-N"
+        "-o", "ExitOnForwardFailure=yes"
+        "-L"
+        "$port`:127.0.0.1`:$port"
+        "$sshUser@$sshHost"
+    )
+
+    Start-Process `
+        -FilePath "ssh.exe" `
+        -ArgumentList $sshArgs `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput "$env:TEMP\ssh_tunnel_ein_out.log" `
+        -RedirectStandardError "$env:TEMP\ssh_tunnel_ein_err.log" | Out-Null
+
+    Start-Sleep -Seconds 1
+
+    $url = "http://localhost:$port/lab"
+    Write-Host "[INFO] Opening browser at $url"
+    Start-Process $url | Out-Null
+}
+
+
+
+function jlab_a8 {
+
+    $sshUser = "bozhen2"
+    $sshHost = "anastasio8.bioen.illinois.edu"
+    $port    = 8894
+
+    Write-Host "[INFO] Starting remote JupyterLab on $sshHost ..."
+    ssh.exe -T "$sshUser@$sshHost" "bash ~/zbz_start/start_jlab_a8.sh" | Out-Null
+
+    # ===== 杀本地占用 8894 的旧进程 =====
+    $pids = (netstat -ano | Select-String ":$port\s" | ForEach-Object {
+        ($_.Line -split "\s+")[-1]
+    } | Select-Object -Unique)
+
+    foreach ($pid in $pids) {
+        if ($pid -match '^\d+$' -and [int]$pid -ne 0) {
+            try { taskkill /PID $pid /F | Out-Null } catch {}
+        }
+    }
+
+    Write-Host "[INFO] Launching SSH tunnel in background..."
+
+    $sshArgs = @(
+        "-N"
+        "-o", "ExitOnForwardFailure=yes"
+        "-L"
+        "$port`:127.0.0.1`:$port"
+        "$sshUser@$sshHost"
+    )
+
+    Start-Process `
+        -FilePath "ssh.exe" `
+        -ArgumentList $sshArgs `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput "$env:TEMP\ssh_tunnel_a8_out.log" `
+        -RedirectStandardError "$env:TEMP\ssh_tunnel_a8_err.log" | Out-Null
+
+    Start-Sleep -Seconds 1
+
+    $url = "http://localhost:$port/lab"
+    Write-Host "[INFO] Opening browser at $url"
+    Start-Process $url | Out-Null
+}
+
+
+
+function jlab_de {
+    Write-Host "[INFO] Starting JupyterLab (devito) on Tesla..."
+
+    # Run remote script
+    $raw = ssh bozhen2@tesla.bioen.illinois.edu "bash ~/zbz_start/start_jlab_de.sh"
+
+    # Extract only digits after PORT=
+    if ($raw -match "PORT=(\d+)") {
+        $port = $matches[1]
+    } else {
+        Write-Host "❌ ERROR: Failed to extract port. Raw output:" -ForegroundColor Red
+        Write-Host $raw
+        return
+    }
+
+    Write-Host "[INFO] Remote port = $port"
+
+    # Forward port
+    Write-Host "[INFO] Forwarding local port $port ..."
+    Start-Job { ssh -L "$using:port`:localhost:$using:port" bozhen2@tesla.bioen.illinois.edu -N } | Out-Null
+    Start-Sleep -Seconds 2
+
+    Write-Host "[INFO] Opening http://localhost:$port"
+    Start-Process "http://localhost:$port"
+}
