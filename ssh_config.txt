@@ -1,0 +1,33 @@
+Host einstein
+  HostName einstein.bioen.illinois.edu
+  User bozhen2
+
+Host tesla
+  HostName tesla.bioen.illinois.edu
+  User bozhen2
+
+Host wk03
+    HostName anastasio-wk-03.bioen.illinois.edu
+    User bozhen2
+    IdentityFile ~/.ssh/id_ed25519
+
+Host a8 
+    HostName anastasio8.bioen.illinois.edu
+    User bozhen2
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
+Host a9
+    HostName anastasio9.bioen.illinois.edu
+    User bozhen2
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
+Host anastasio-h01
+  HostName anastasio-h01.bioen.illinois.edu
+  User bozhen2
+
+Host turing
+    HostName turing.bioen.illinois.edu
+    User bozhen2
+    IdentityFile ~/.ssh/id_ed25519
