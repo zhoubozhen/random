@@ -2,6 +2,12 @@ Host einstein
   HostName einstein.bioen.illinois.edu
   User bozhen2
 
+Host wk04
+    HostName anastasio-wk-04.bioen.illinois.edu
+    User bozhen2
+    IdentityFile ~/.ssh/id_ed25519
+    IdentitiesOnly yes
+
 Host tesla
   HostName tesla.bioen.illinois.edu
   User bozhen2
