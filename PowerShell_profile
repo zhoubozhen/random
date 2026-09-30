@@ -1,39 +1,56 @@
-位于C:\Users\Bozhen Zhou\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1
-
 function jlab {
 
-    $sshUser = "bozhen2"
-    $sshHost = "tesla.bioen.illinois.edu"
+    $sshHost = "wk04"
     $port    = 8892
 
-    Write-Host "[INFO] Starting remote JupyterLab..."
+    Write-Host "[INFO] Starting remote JupyterLab on $sshHost..."
 
-    # 启动远端 Jupyter（不显示输出）
-    ssh.exe -T "$sshUser@$sshHost" "bash ~/zbz_start/start_jlab.sh" | Out-Null
+    ssh.exe -T $sshHost "bash ~/zbz_start/start_jlab.sh" | Out-Null
+
+    # 清除本地占用 8892 端口的旧 SSH 隧道
+    $processIds = (
+        netstat -ano |
+        Select-String ":$port\s" |
+        ForEach-Object {
+            ($_.Line -split "\s+")[-1]
+        } |
+        Select-Object -Unique
+    )
+
+    foreach ($processId in $processIds) {
+        if ($processId -match '^\d+$' -and [int]$processId -ne 0) {
+            try {
+                taskkill /PID $processId /F | Out-Null
+            }
+            catch {}
+        }
+    }
 
     Write-Host "[INFO] Launching SSH tunnel in background..."
 
     $sshArgs = @(
         "-N"
-        "-L"
-        "$port`:127.0.0.1`:$port"
-        "$sshUser@$sshHost"
+        "-o", "ExitOnForwardFailure=yes"
+        "-o", "ServerAliveInterval=60"
+        "-o", "ServerAliveCountMax=3"
+        "-L", "$port`:127.0.0.1`:$port"
+        $sshHost
     )
 
     Start-Process `
         -FilePath "ssh.exe" `
         -ArgumentList $sshArgs `
         -WindowStyle Hidden `
-        -RedirectStandardOutput "$env:TEMP\ssh_tunnel_out.log" `
-        -RedirectStandardError "$env:TEMP\ssh_tunnel_err.log"
+        -RedirectStandardOutput "$env:TEMP\ssh_tunnel_wk04_out.log" `
+        -RedirectStandardError "$env:TEMP\ssh_tunnel_wk04_err.log" |
+        Out-Null
 
-    Start-Sleep -Seconds 1
+    Start-Sleep -Seconds 2
 
     $url = "http://localhost:$port/lab"
     Write-Host "[INFO] Opening browser at $url"
-    Start-Process $url
+    Start-Process $url | Out-Null
 }
-
 
 function jlab_ein {
 
